@@ -22,7 +22,7 @@ class pyZabbixSender:
     This class allows you to send data to a Zabbix server, using the same
     protocol used by the zabbix_server binary distributed by Zabbix.
     '''
-    ZABBIX_SERVER = "meter.3s.money"
+    ZABBIX_SERVER = "127.0.0.1"
     ZABBIX_PORT   = 10051
 
     # Return codes when sending data:
