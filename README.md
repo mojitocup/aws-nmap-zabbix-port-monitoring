@@ -29,5 +29,11 @@ aws ec2 describe-addresses | grep '"PublicIp":' | cut -f 2 -d : | sed s'/"//g' |
 cat /home/ubuntu/nmap/perimeterIP.log | xargs /home/ubuntu/nmap/zabbix2test --server YOUR_ZABBIX_SERVER --port 10051 --host ANY_ZABBIX_HOSTNAME_IN_PERIMETER<br/>
 <br/>
 
-change zabbx_server as default if needed in pyZabbixSender.py
-
+change zabbx_server as default if needed in pyZabbixSender.py<br/>
+<br/>
+install XML template to zabbix. (zbx_nmap.xml)<br/>
+<br/>
+run sh script. add to cron if needed.<br/>
+<br/>
+Template uses zabbix trap, so dont forget to change allowed host <br/>
+Change units in to unixtime to get proper timestamp<br/>
