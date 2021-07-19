@@ -1,0 +1,79 @@
+#!/usr/bin/python2
+
+import nmapparser
+import argparse
+import json
+import time
+import pyZabbixSender
+import time
+import subprocess
+import tempfile
+
+parser = argparse.ArgumentParser(description='Zabbix NMAP open port monitor v1.0 (C)2015 edwin@datux.nl',
+        epilog="""This program scans a network for open ports and creates a zabbix alert for each open port. This is usefull to prevent firewall "accidents". For example: ./zabbix-nmap --server my.zabbixserver.c
+om --port 10052 --host servername.in.zabbix 21.22.23.0/24""")
+
+parser.add_argument('--host', required=True,help='Host the data belongs to. (this host should have the NMAP template)')
+parser.add_argument('--server', required=True,help='Zabbix server')
+parser.add_argument('--port', type=int, required=True,help='Zabbix port')
+parser.add_argument('nmap_params', nargs='+', help='Nmap parameters (in addition to -oX -)')
+args = parser.parse_args()
+
+with tempfile.NamedTemporaryFile() as tmp_file:
+        nmap_cmd=[ "nmap", "-oX", tmp_file.name ]
+        nmap_cmd.extend(args.nmap_params)
+        print("Running: "+" ".join(nmap_cmd))
+        subprocess.check_call(nmap_cmd)
+        nmap_data=nmapparser.parse_nmap_xml(tmp_file.name)
+        print(tmp_file.name)
+
+timestamp=str(int(time.mktime(time.localtime())))
+zabbix_discovery_data={ "data": [] }
+
+print("Sending data to Zabbix server")
+zabbix=pyZabbixSender.pyZabbixSender(server=args.server, port=args.port)
+#make current data "invalid", triggers are hold on current value if this is 0
+ret=zabbix.sendSingle(args.host, "nmap.last_scan", 0, timestamp)
+
+if ret[0]:
+        print("ret0")
+        raise(Exception(str(ret)))
+for host in nmap_data["host"]:
+        if host["status"]["state"]=="up":
+                for port in host["ports"]["ports"]:
+                        if port["state"]=="open":
+                                #long uniq portstring for every port, also containts host, protocol and addrtype
+                                port_string=host["address"][0]["addrtype"]+"/"+host["address"][0]["addr"]
+                                port_string+="/"+port["protocol"]+"/"+port["portid"]
+                                print(port_string)
+
+                                # print (port_string)
+                                zabbix_discovery_data["data"].append( {
+                                         "{#PORT}": "'"+port_string+"'"
+                                          } )
+
+                                zabbix.addData(args.host, "nmap.state['{0}']".format(port_string),timestamp)
+                                print("port_string", str(port_string))
+
+#send discovery and after that the items
+ret=zabbix.sendSingle(args.host, "nmap.discovery", json.dumps(zabbix_discovery_data), timestamp)
+print("sendsingle", str(ret))
+if ret[0]:
+        raise(Exception(str(ret)))
+
+#wait for lowlevel discovery item to become active
+print("Waiting for low-level-discovery update.")
+time.sleep(65)
+ret=zabbix.sendData()
+if ret[0][0]:
+    #ignore errors from disabled items:
+    #raise(Exception(str(ret)))
+    print("ERRORS while sending data, might be disabled items:", str(ret))
+
+
+#data is valid from now on, triggers can be recalculated
+ret=zabbix.sendSingle(args.host, "nmap.last_scan", timestamp)
+if ret[0]:
+        raise(Exception(str(ret)))
+
+print("Done")
