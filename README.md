@@ -26,4 +26,8 @@ change --server to you zabbix server IP or domain.
 change -- host to any "Host name" on zabbix network
 
 aws ec2 describe-addresses | grep '"PublicIp":' | cut -f 2 -d : | sed s'/"//g' | sed s'/,//g' | xargs > /home/ubuntu/nmap/perimeterIP.log <br/>
-cat /home/ubuntu/nmap/perimeterIP.log | xargs /home/ubuntu/nmap/zabbix2test --server YOUR_ZABBIX_SERVER --port 10051 --host ANY_ZABBIX_HOSTNAME_IN_PERIMETER
+cat /home/ubuntu/nmap/perimeterIP.log | xargs /home/ubuntu/nmap/zabbix2test --server YOUR_ZABBIX_SERVER --port 10051 --host ANY_ZABBIX_HOSTNAME_IN_PERIMETER<br/>
+<br/>
+
+change zabbx_server as default if needed in pyZabbixSender.py
+
